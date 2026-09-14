@@ -1,7 +1,7 @@
 <!--
   PLAENS receipt template for EmailJS
   ===================================
-  1. In EmailJS open your template, go to the Content tab and press the
+  1. Open your template in EmailJS, go to the Content tab and press the
      code button (< >) to switch to the HTML editor.
   2. Delete everything in there and paste this whole file.
   3. Open the Settings tab, next to Content, and set:
@@ -11,20 +11,43 @@
         Subject     {{subject}}
   4. Save.
 
-  The dashboard fills in every {{variable}} automatically. Amounts already
-  include your currency, so don't add a $ anywhere. The blocks for discount,
-  tax, delivery address and tracking appear only when the order has them.
+  THE LOGO
+  --------
+  Find the line below marked LOGO and put a public web address in it. Email
+  apps can only show pictures that live on the open web, so an address on your
+  own computer (127.0.0.1 or localhost) always shows a broken icon.
+  (EmailJS attachments would avoid this, but they are not part of the free plan.)
+
+  Once your dashboard is on GitHub Pages, use:
+      https://YOURNAME.github.io/YOUR-REPO/assets/logo-receipt.png
+
+  Or, before hosting: upload logo.png to any public GitHub repository, open it
+  there, press "Raw", and copy that address. It looks like:
+      https://raw.githubusercontent.com/YOURNAME/YOUR-REPO/main/logo.png
+
+  Paste the address into a browser first. If the logo appears there, it will
+  appear in the email.
+
+  A NOTE ON EDITING
+  -----------------
+  The items, totals and address arrive from the dashboard as ready-made
+  tables, in the variables with three curly braces. Keep each of those
+  variables inside its own <td> cell exactly where it is. Moving one directly
+  into a <table>, or changing three braces to two, will scatter the layout.
 -->
 <div style="margin:0;padding:32px 12px;background-color:#F7F2EC;font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;">
-  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" align="center" style="width:100%;max-width:600px;margin:auto;background-color:#FFFDFA;border:1px solid #E8DED3;">
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" align="center" style="width:100%;max-width:600px;margin:auto;background-color:#FFFDFA;border:1px solid #E8DED3;border-collapse:collapse;">
 
     <!-- Logo and order number -->
     <tr>
       <td style="padding:32px 40px 16px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
           <tr>
-            <td valign="middle">
-              {{#logo}}<img src="{{url}}" alt="" width="42" height="44" style="display:inline-block;vertical-align:middle;border:0;margin-right:12px;">{{/logo}}
+            <td align="left" valign="middle">
+              <!-- LOGO: replace this address with your own public one -->
+              <img src="https://YOURNAME.github.io/YOUR-REPO/assets/logo-receipt.png"
+                   alt="" width="42" height="44"
+                   style="display:inline-block;vertical-align:middle;border:0;margin-right:12px;">
               <span style="display:inline-block;vertical-align:middle;font-size:19px;font-weight:bold;letter-spacing:7px;color:#45291D;">{{store_name}}</span>
             </td>
             <td align="right" valign="middle" style="font-size:13px;color:#7B6B61;white-space:nowrap;">Order {{order_id}}</td>
@@ -34,7 +57,11 @@
     </tr>
 
     <!-- Horizon rule -->
-    <tr><td style="padding:0 40px;"><div style="height:4px;line-height:4px;font-size:0;background-color:#45291D;">&nbsp;</div></td></tr>
+    <tr>
+      <td style="padding:0 40px;">
+        <div style="height:4px;line-height:4px;font-size:0;background-color:#45291D;">&nbsp;</div>
+      </td>
+    </tr>
 
     <!-- Greeting -->
     <tr>
@@ -47,7 +74,7 @@
     <!-- Order details -->
     <tr>
       <td style="padding:26px 40px 0;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F2EAE0;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F2EAE0;border-collapse:collapse;">
           <tr>
             <td width="34%" valign="top" style="padding:14px 16px;">
               <div style="font-size:12px;color:#7B6B61;">Order number</div>
@@ -68,83 +95,29 @@
 
     <!-- Items -->
     <tr>
-      <td style="padding:26px 40px 0;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-          <tr>
-            <td style="padding-bottom:10px;border-bottom:1px solid #45291D;font-size:12px;color:#7B6B61;">What you ordered</td>
-            <td align="right" style="padding-bottom:10px;border-bottom:1px solid #45291D;font-size:12px;color:#7B6B61;">Amount</td>
-          </tr>
-          {{#orders}}
-          <tr>
-            <td style="padding:16px 0;border-bottom:1px solid #E8DED3;">
-              <div style="font-size:15px;line-height:1.4;font-weight:bold;color:#45291D;">{{name}}</div>
-              <div style="font-size:13px;line-height:1.5;color:#7B6B61;padding-top:3px;">{{variant}}<br>{{units}} &times; {{price}}</div>
-            </td>
-            <td align="right" valign="top" style="padding:16px 0;border-bottom:1px solid #E8DED3;font-size:15px;color:#45291D;white-space:nowrap;">{{amount}}</td>
-          </tr>
-          {{/orders}}
-        </table>
-      </td>
+      <td style="padding:26px 40px 0;">{{{items_html}}}</td>
     </tr>
 
     <!-- Totals -->
     <tr>
-      <td style="padding:16px 40px 0;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-          <tr>
-            <td style="padding:5px 0;font-size:14px;color:#4A3A33;">Subtotal</td>
-            <td align="right" style="padding:5px 0;font-size:14px;color:#4A3A33;white-space:nowrap;">{{cost.subtotal}}</td>
-          </tr>
-          {{#discount}}
-          <tr>
-            <td style="padding:5px 0;font-size:14px;color:#4A3A33;">Discount</td>
-            <td align="right" style="padding:5px 0;font-size:14px;color:#4A3A33;white-space:nowrap;">&minus;{{amount}}</td>
-          </tr>
-          {{/discount}}
-          <tr>
-            <td style="padding:5px 0;font-size:14px;color:#4A3A33;">Shipping</td>
-            <td align="right" style="padding:5px 0;font-size:14px;color:#4A3A33;white-space:nowrap;">{{cost.shipping}}</td>
-          </tr>
-          {{#tax}}
-          <tr>
-            <td style="padding:5px 0;font-size:14px;color:#4A3A33;">Tax ({{rate}}%)</td>
-            <td align="right" style="padding:5px 0;font-size:14px;color:#4A3A33;white-space:nowrap;">{{amount}}</td>
-          </tr>
-          {{/tax}}
-          <tr><td colspan="2" style="height:10px;line-height:10px;font-size:0;">&nbsp;</td></tr>
-          <tr>
-            <td style="padding-top:14px;border-top:3px solid #45291D;font-size:17px;font-weight:bold;color:#45291D;">Total</td>
-            <td align="right" style="padding-top:14px;border-top:3px solid #45291D;font-size:17px;font-weight:bold;color:#45291D;white-space:nowrap;">{{cost.total}}</td>
-          </tr>
-        </table>
-      </td>
+      <td style="padding:16px 40px 0;">{{{totals_html}}}</td>
     </tr>
 
-    <!-- Delivery address -->
-    {{#delivery}}
+    <!-- Delivery address and customer details -->
     <tr>
-      <td style="padding:30px 40px 0;">
-        <div style="font-size:12px;color:#7B6B61;padding-bottom:6px;">Delivering to</div>
-        <div style="font-size:14px;line-height:1.6;color:#4A3A33;">{{{html}}}</div>
-      </td>
+      <td style="padding:26px 40px 0;">{{{delivery_html}}}</td>
     </tr>
-    {{/delivery}}
 
     <!-- Tracking -->
-    {{#tracking}}
     <tr>
-      <td style="padding:18px 40px 0;">
-        <div style="font-size:12px;color:#7B6B61;padding-bottom:6px;">Tracking</div>
-        <div style="font-size:14px;line-height:1.6;color:#4A3A33;">{{text}}</div>
-      </td>
+      <td style="padding:18px 40px 0;">{{{tracking_html}}}</td>
     </tr>
-    {{/tracking}}
 
     <!-- Note -->
     <tr>
       <td style="padding:26px 40px 32px;font-size:14px;line-height:1.65;color:#4A3A33;">
         {{receipt_note}}<br>
-        Questions about your order? Just reply to this email{{#store_email}} or write to <a href="mailto:{{address}}" style="color:#45291D;">{{address}}</a>{{/store_email}}.
+        {{{contact_line}}}
       </td>
     </tr>
 
@@ -152,15 +125,13 @@
     <tr>
       <td style="padding:20px 40px 28px;border-top:1px solid #E8DED3;font-size:12px;line-height:1.8;color:#7B6B61;">
         <strong style="color:#45291D;letter-spacing:3px;">{{store_name}}</strong><br>
-        {{#website}}<a href="{{url}}" style="color:#45291D;">{{label}}</a>&nbsp;&nbsp;{{/website}}
-        {{#instagram}}Instagram {{handle}}&nbsp;&nbsp;{{/instagram}}
-        {{#phone}}{{number}}{{/phone}}
+        {{{footer_links}}}
       </td>
     </tr>
 
   </table>
 
-  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" align="center" style="width:100%;max-width:600px;margin:auto;">
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" align="center" style="width:100%;max-width:600px;margin:auto;border-collapse:collapse;">
     <tr>
       <td style="padding:16px 8px;font-size:12px;line-height:1.6;color:#9A8B80;">
         This email was sent to {{to_email}} because you placed an order with {{store_name}}.

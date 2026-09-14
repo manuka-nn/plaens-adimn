@@ -1327,6 +1327,74 @@
       const fmt = (n) => raw(n).replace(/\u00A0/g, ' ');
       const ship = addressLines(order.shippingAddress);
       const site = settings.website || '';
+
+      /* Each block below is a COMPLETE table, and the template drops each one
+         inside a <td>. That matters: a placeholder sitting directly inside a
+         <table> is invalid HTML, and parsers push such content out above the
+         table, which scatters the receipt. Whole tables inside cells are safe. */
+
+      const TABLE = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;">`;
+
+      const itemRows = order.items.map((i) => {
+        const variant = [i.size && `Size ${i.size}`, i.color].filter(Boolean).join(', ');
+        return `<tr>
+          <td align="left" style="padding:16px 0;border-bottom:1px solid ${C.line};font-family:${FONT};">
+            <div style="font-size:15px;line-height:1.4;font-weight:bold;color:${C.moss};">${esc(i.name)}</div>
+            <div style="font-size:13px;line-height:1.5;color:${C.muted};padding-top:3px;">${esc(variant)}${variant ? '<br>' : ''}${i.quantity} &times; ${esc(fmt(i.unitPrice))}</div>
+          </td>
+          <td align="right" valign="top" style="padding:16px 0;border-bottom:1px solid ${C.line};font-family:${FONT};font-size:15px;color:${C.moss};white-space:nowrap;">${esc(fmt(i.lineTotal))}</td>
+        </tr>`;
+      }).join('');
+
+      const itemsHtml = `${TABLE}
+        <tr>
+          <td align="left" style="padding:0 0 10px;border-bottom:1px solid ${C.moss};font-family:${FONT};font-size:12px;color:${C.muted};">What you ordered</td>
+          <td align="right" style="padding:0 0 10px;border-bottom:1px solid ${C.moss};font-family:${FONT};font-size:12px;color:${C.muted};">Amount</td>
+        </tr>
+        ${itemRows}
+      </table>`;
+
+      const totalRow = (label, value, strong) => `<tr>
+        <td align="left" style="padding:${strong ? '14px 0 0' : '5px 0'};font-family:${FONT};font-size:${strong ? '17px' : '14px'};color:${strong ? C.moss : C.body};${strong ? `font-weight:bold;border-top:3px solid ${C.moss};` : ''}">${label}</td>
+        <td align="right" style="padding:${strong ? '14px 0 0' : '5px 0'};font-family:${FONT};font-size:${strong ? '17px' : '14px'};color:${strong ? C.moss : C.body};white-space:nowrap;${strong ? `font-weight:bold;border-top:3px solid ${C.moss};` : ''}">${value}</td>
+      </tr>`;
+
+      const totalsHtml = `${TABLE}
+        ${totalRow('Subtotal', esc(fmt(order.subtotal)))}
+        ${order.discount ? totalRow('Discount', `&minus;${esc(fmt(order.discount))}`) : ''}
+        ${totalRow('Shipping', order.shipping ? esc(fmt(order.shipping)) : 'Free')}
+        ${order.tax ? totalRow(`Tax (${order.taxRate}%)`, esc(fmt(order.tax))) : ''}
+        <tr><td colspan="2" style="height:10px;line-height:10px;font-size:0;">&nbsp;</td></tr>
+        ${totalRow('Total', esc(fmt(order.total)), true)}
+      </table>`;
+
+      const column = (label, body) => `<td width="50%" valign="top" style="font-family:${FONT};padding:0 16px 0 0;">
+        <div style="font-size:12px;color:${C.muted};padding-bottom:6px;">${label}</div>
+        <div style="font-size:14px;line-height:1.6;color:${C.body};">${body}</div></td>`;
+
+      const deliveryBody = ship.length
+        ? [order.customer.name, ...ship].map(esc).join('<br>')
+        : order.channel === 'store' ? 'Purchased in store' : '';
+      const contactBody = [order.customer.email, order.customer.phone].filter(Boolean).map(esc).join('<br>');
+      const columns = [
+        deliveryBody ? column('Delivering to', deliveryBody) : '',
+        contactBody ? column('Your details', contactBody) : '',
+      ].filter(Boolean).join('');
+      const deliveryHtml = columns ? `${TABLE}<tr>${columns}</tr></table>` : '';
+
+      const trackingHtml = order.trackingNumber
+        ? `${TABLE}<tr><td style="font-family:${FONT};">
+            <div style="font-size:12px;color:${C.muted};padding-bottom:6px;">Tracking</div>
+            <div style="font-size:14px;line-height:1.6;color:${C.body};">${esc(`${order.carrier} ${order.trackingNumber}`.trim())}</div>
+          </td></tr></table>`
+        : '';
+
+      const footerBits = [
+        site ? `<a href="${esc(site)}" style="color:${C.moss};">${esc(site.replace(/^https?:\/\//, ''))}</a>` : '',
+        settings.instagram ? `Instagram ${esc(settings.instagram)}` : '',
+        settings.phone ? esc(settings.phone) : '',
+      ].filter(Boolean).join('&nbsp;&nbsp;|&nbsp;&nbsp;');
+
       return {
         order_id: order.orderNumber,
         order_date: new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
@@ -1335,29 +1403,15 @@
         payment: `${PAYMENT_LABELS[order.paymentMethod] || order.paymentMethod}${order.paymentStatus === 'paid' ? ', paid' : ', awaiting payment'}`,
         store_name: settings.storeName,
         receipt_note: settings.receiptNote || '',
-
-        orders: order.items.map((i) => ({
-          name: i.name,
-          variant: [i.size && `Size ${i.size}`, i.color].filter(Boolean).join(', '),
-          units: i.quantity,
-          price: fmt(i.unitPrice),
-          amount: fmt(i.lineTotal),
-        })),
-
-        cost: { subtotal: fmt(order.subtotal), shipping: order.shipping ? fmt(order.shipping) : 'Free', total: fmt(order.total) },
-
-        /* Optional blocks. Each is an object or false, never a bare string:
-           a template section over an object can read its fields in every
-           template engine, which a section over a string can't. */
-        logo: logoUrl ? { url: logoUrl } : false,
-        discount: order.discount ? { amount: fmt(order.discount) } : false,
-        tax: order.tax ? { amount: fmt(order.tax), rate: String(order.taxRate) } : false,
-        delivery: ship.length ? { html: [order.customer.name, ...ship].map(esc).join('<br>') } : false,
-        tracking: order.trackingNumber ? { text: `${order.carrier} ${order.trackingNumber}`.trim() } : false,
-        store_email: settings.email ? { address: settings.email } : false,
-        website: site ? { url: site, label: site.replace(/^https?:\/\//, '') } : false,
-        instagram: settings.instagram ? { handle: settings.instagram } : false,
-        phone: settings.phone ? { number: settings.phone } : false,
+        contact_line: settings.email
+          ? `Questions about your order? Just reply to this email or write to <a href="mailto:${esc(settings.email)}" style="color:${C.moss};">${esc(settings.email)}</a>.`
+          : 'Questions about your order? Just reply to this email.',
+        items_html: itemsHtml,
+        totals_html: totalsHtml,
+        delivery_html: deliveryHtml,
+        tracking_html: trackingHtml,
+        footer_links: footerBits,
+        total: fmt(order.total),
       };
     }
 
